@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# Example update hook which doesn't accept changes with executable text files.
+#
+# This is useful when using Cygwin git clients as the permissions are often
+# changed accidentally when working with Cygwin. To use this hook, rename it
+# to just "update" and copy it to hooks subdirectory of your repository.
+
+# This hook is called with the following arguments: refname sha1-old sha1-new
+refname="$1"
+oldrev="$2"
+newrev="$3"
+
+# If $newrev is 0000...0000, it's a commit to delete a ref and we are not
+# interested in examining it.
+zero="0000000000000000000000000000000000000000"
+if [ "$newrev" = "$zero" ]; then
+    newrev_type=delete
+else
+    newrev_type=$(git cat-file -t $newrev)
+fi
+
+if [ "$newrev_type" = "commit" ]; then
+    git diff-tree -r $oldrev $newrev | while IFS='' read -r line; do
+        file=`echo "$line" | cut -d'	' -f2`
+        case "$file" in
+            *.bkl | *.c | *.cpp | *.cs | *.css | *.dia | *.jpg | *.h | *.hpp | *.html | *.png | *.txt)
+                ;;
+
+            *)
+                # Other files can be executable.
+                continue
+                ;;
+        esac
+
+        oldnewmodes=`echo "$line" | cut -d' ' -f1,2`
+        case "$oldnewmodes" in
+            :100644\ 100755)
+                errmsg='incorrectly changed to be executable'
+                ;;
+
+            :000000\ 100755)
+                errmsg='incorrectly created as executable'
+                ;;
+        esac
+
+        if [ -n "$errmsg" ]; then
+            echo "Error: file \"$file\" $errmsg." 2>&1
+
+            # Notice that this code executes in a subshell, so this exit
+            # doesn't exit the entire hook and the pipeline exit status needs
+            # to be explicitly checked below to return error from the hook.
+            exit 1
+        fi
+    done
+
+    [ $? -eq 0 ] || exit 1
+fi
+
+# No problems found.
+exit 0

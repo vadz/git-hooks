@@ -24,7 +24,7 @@ if [ "$newrev_type" = "commit" ]; then
     git diff-tree -r $oldrev $newrev | while IFS='' read -r line; do
         file=`echo "$line" | cut -d'	' -f2`
         case "$file" in
-            *.bkl | *.c | *.cpp | *.cs | *.css | *.dia | *.jpg | *.h | *.hpp | *.html | *.png | *.txt)
+            *.bkl | *.c | *.cpp | *.cs | *.css | *.dia | *.jpg | *.h | *.hpp | *.html | *.png | *.tex | *.txt)
                 ;;
 
             *)
